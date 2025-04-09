@@ -1,14 +1,14 @@
 
 import React, { useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, useGLTF, Environment, Float } from '@react-three/drei';
+import { OrbitControls, Environment, Float } from '@react-three/drei';
 import * as THREE from 'three';
 
 // Medicine bottle model
 const MedicineBottle = ({ position = [0, 0, 0], rotation = [0, 0, 0] }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   
-  useFrame((state) => {
+  useFrame(() => {
     if (meshRef.current) {
       meshRef.current.rotation.y += 0.005;
     }
@@ -17,10 +17,10 @@ const MedicineBottle = ({ position = [0, 0, 0], rotation = [0, 0, 0] }) => {
   return (
     <mesh ref={meshRef} position={position as [number, number, number]} rotation={rotation as [number, number, number]}>
       <cylinderGeometry args={[0.5, 0.5, 1.5, 32]} />
-      <meshStandardMaterial color="#38bdf8" metalness={0.3} roughness={0.2} />
+      <meshStandardMaterial attach="material" color="#38bdf8" metalness={0.3} roughness={0.2} />
       <mesh position={[0, 0.9, 0]}>
         <cylinderGeometry args={[0.3, 0.5, 0.3, 32]} />
-        <meshStandardMaterial color="#0284c7" metalness={0.3} roughness={0.4} />
+        <meshStandardMaterial attach="material" color="#0284c7" metalness={0.3} roughness={0.4} />
       </mesh>
     </mesh>
   );
@@ -30,7 +30,7 @@ const MedicineBottle = ({ position = [0, 0, 0], rotation = [0, 0, 0] }) => {
 const WhatsAppIcon = ({ position = [2, 0, 0] }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   
-  useFrame((state) => {
+  useFrame(() => {
     if (meshRef.current) {
       meshRef.current.rotation.y -= 0.005;
     }
@@ -39,10 +39,10 @@ const WhatsAppIcon = ({ position = [2, 0, 0] }) => {
   return (
     <mesh ref={meshRef} position={position as [number, number, number]}>
       <boxGeometry args={[1.2, 1.2, 0.2]} />
-      <meshStandardMaterial color="#25D366" metalness={0.3} roughness={0.4} />
+      <meshStandardMaterial attach="material" color="#25D366" metalness={0.3} roughness={0.4} />
       <mesh position={[0, 0, 0.15]}>
         <sphereGeometry args={[0.4, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
-        <meshStandardMaterial color="white" />
+        <meshStandardMaterial attach="material" color="white" />
       </mesh>
     </mesh>
   );
