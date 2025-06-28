@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -26,9 +27,9 @@ const Navbar = () => {
       <div className="container mx-auto px-4 md:px-6">
         <nav className="flex items-center justify-between">
           <div className="flex items-center">
-            <a href="/" className="text-2xl font-display font-bold text-shushastho-700">
+            <Link to="/" className="text-2xl font-display font-bold text-shushastho-700">
               Shushastho
-            </a>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}
@@ -37,6 +38,11 @@ const Navbar = () => {
             <a href="#how-it-works" className="text-gray-700 hover:text-shushastho-600 font-medium transition-colors">How It Works</a>
             <a href="#impact" className="text-gray-700 hover:text-shushastho-600 font-medium transition-colors">Impact</a>
             <a href="#about" className="text-gray-700 hover:text-shushastho-600 font-medium transition-colors">About Us</a>
+            <Link to="/demo">
+              <Button variant="outline" className="mr-2">
+                Try Demo
+              </Button>
+            </Link>
             <Button 
               className="bg-gradient-to-r from-shushastho-600 to-accent-600 hover:from-shushastho-700 hover:to-accent-700 text-white"
             >
@@ -65,6 +71,11 @@ const Navbar = () => {
               <a href="#how-it-works" className="text-gray-700 hover:text-shushastho-600 font-medium transition-colors py-2">How It Works</a>
               <a href="#impact" className="text-gray-700 hover:text-shushastho-600 font-medium transition-colors py-2">Impact</a>
               <a href="#about" className="text-gray-700 hover:text-shushastho-600 font-medium transition-colors py-2">About Us</a>
+              <Link to="/demo" className="py-2">
+                <Button variant="outline" className="w-full mb-2">
+                  Try Demo
+                </Button>
+              </Link>
               <Button 
                 className="bg-gradient-to-r from-shushastho-600 to-accent-600 hover:from-shushastho-700 hover:to-accent-700 text-white w-full"
               >
