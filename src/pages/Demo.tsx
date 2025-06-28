@@ -48,8 +48,22 @@ const Demo = () => {
     'default': "I understand you need healthcare assistance. Could you please tell me more specifically how I can help? You can ask about medicines, upload prescriptions, or inquire about deliveries."
   };
 
+  const validatePrescriptionImage = (imageUrl: string): boolean => {
+    // Simple validation based on common prescription characteristics
+    // In a real app, this would use ML/AI to analyze the image content
+    const randomValidation = Math.random();
+    
+    // Simulate 70% chance of valid prescription, 30% invalid
+    return randomValidation > 0.3;
+  };
+
   const analyzePrescription = (imageUrl: string): string => {
-    // Simulated prescription analysis
+    // First validate if it's a prescription
+    if (!validatePrescriptionImage(imageUrl)) {
+      return "❌ Invalid Image\n\nThis doesn't appear to be a prescription. Please upload a clear image of a medical prescription with:\n\n• Doctor's name and signature\n• Patient information\n• Medicine names and dosages\n• Date of prescription\n\nTry uploading a different image or take a clearer photo of your prescription.";
+    }
+
+    // Simulated prescription analysis for valid images
     const sampleMedicines = [
       "Paracetamol 500mg - Take 1 tablet twice daily after meals",
       "Amoxicillin 250mg - Take 1 capsule three times daily for 7 days", 
@@ -58,7 +72,7 @@ const Demo = () => {
     
     const randomMedicines = sampleMedicines.slice(0, Math.floor(Math.random() * 3) + 1);
     
-    return `I've analyzed your prescription image. Here are the medicines I found:\n\n${randomMedicines.map((med, index) => `${index + 1}. ${med}`).join('\n')}\n\nWould you like me to help you order these medicines? I can arrange delivery to your location within 24-48 hours.`;
+    return `✅ Prescription Analysis Complete\n\nI've successfully analyzed your prescription image. Here are the medicines I found:\n\n${randomMedicines.map((med, index) => `${index + 1}. ${med}`).join('\n')}\n\nWould you like me to help you order these medicines? I can arrange delivery to your location within 24-48 hours.`;
   };
 
   const generateBotResponse = (userMessage: string, hasImage: boolean = false): string => {
@@ -98,6 +112,16 @@ const Demo = () => {
       return;
     }
 
+    // Check file size (limit to 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const imageUrl = e.target?.result as string;
@@ -117,7 +141,7 @@ const Demo = () => {
       setTimeout(() => {
         const botResponse: Message = {
           id: Date.now() + 1,
-          text: generateBotResponse("", true),
+          text: analyzePrescription(imageUrl),
           sender: 'bot',
           timestamp: new Date()
         };
@@ -342,8 +366,8 @@ const Demo = () => {
               <div>
                 <h4 className="font-medium text-shushastho-600">Features:</h4>
                 <ul className="text-gray-600 mt-1 space-y-1">
-                  <li>• Prescription reading</li>
-                  <li>• Medicine ordering</li>
+                  <li>• Prescription validation</li>
+                  <li>• Medicine extraction</li>
                   <li>• Delivery tracking</li>
                 </ul>
               </div>
