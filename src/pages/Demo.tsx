@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Send, ArrowLeft, Phone, MoreVertical, Camera, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { DeepSeekService } from "@/services/DeepSeekService";
+import { ApiKeySetup } from "@/components/ApiKeySetup";
 
 interface Message {
   id: number;
@@ -25,9 +27,16 @@ const Demo = () => {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Check if API key exists on component mount
+    const apiKey = DeepSeekService.getApiKey();
+    setHasApiKey(!!apiKey);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,42 +53,26 @@ const Demo = () => {
     'delivery': "We deliver medicines to rural areas within 24-48 hours. What's your location? Our delivery network covers most remote areas.",
     'emergency': "For medical emergencies, please contact your nearest hospital immediately. I can help you find the closest medical facility or arrange medicine delivery for ongoing treatment.",
     'help': "I can assist with: 📋 Reading prescriptions, 💊 Medicine ordering, 🚚 Delivery tracking, 🏥 Finding nearby clinics, ⏰ Medication reminders. What would you like help with?",
-    'upload': "Perfect! I can read prescription images. The image shows your prescribed medicines. Let me extract the details for you.",
     'default': "I understand you need healthcare assistance. Could you please tell me more specifically how I can help? You can ask about medicines, upload prescriptions, or inquire about deliveries."
   };
 
-  const validatePrescriptionImage = (imageUrl: string): boolean => {
-    // Simple validation based on common prescription characteristics
-    // In a real app, this would use ML/AI to analyze the image content
-    const randomValidation = Math.random();
-    
-    // Simulate 70% chance of valid prescription, 30% invalid
-    return randomValidation > 0.3;
+  const analyzePrescription = async (imageBase64: string): Promise<string> => {
+    try {
+      console.log('Starting prescription analysis with DeepSeek API');
+      const result = await DeepSeekService.analyzePrescriptionWithAI(imageBase64);
+      
+      if (result.success && result.analysis) {
+        return `✅ Prescription Analysis Complete\n\n${result.analysis}\n\nWould you like me to help you order these medicines? I can arrange delivery to your location within 24-48 hours.`;
+      } else {
+        return `❌ Analysis Failed\n\n${result.error || 'Unable to analyze the prescription image. Please try uploading a clearer image.'}\n\nMake sure your image contains:\n• Doctor's name and signature\n• Patient information\n• Medicine names and dosages\n• Date of prescription`;
+      }
+    } catch (error) {
+      console.error('Error analyzing prescription:', error);
+      return "❌ Analysis Error\n\nSorry, I encountered an error while analyzing your prescription. Please try again or upload a different image.";
+    }
   };
 
-  const analyzePrescription = (imageUrl: string): string => {
-    // First validate if it's a prescription
-    if (!validatePrescriptionImage(imageUrl)) {
-      return "❌ Invalid Image\n\nThis doesn't appear to be a prescription. Please upload a clear image of a medical prescription with:\n\n• Doctor's name and signature\n• Patient information\n• Medicine names and dosages\n• Date of prescription\n\nTry uploading a different image or take a clearer photo of your prescription.";
-    }
-
-    // Simulated prescription analysis for valid images
-    const sampleMedicines = [
-      "Paracetamol 500mg - Take 1 tablet twice daily after meals",
-      "Amoxicillin 250mg - Take 1 capsule three times daily for 7 days", 
-      "Vitamin D3 1000IU - Take 1 tablet once daily"
-    ];
-    
-    const randomMedicines = sampleMedicines.slice(0, Math.floor(Math.random() * 3) + 1);
-    
-    return `✅ Prescription Analysis Complete\n\nI've successfully analyzed your prescription image. Here are the medicines I found:\n\n${randomMedicines.map((med, index) => `${index + 1}. ${med}`).join('\n')}\n\nWould you like me to help you order these medicines? I can arrange delivery to your location within 24-48 hours.`;
-  };
-
-  const generateBotResponse = (userMessage: string, hasImage: boolean = false): string => {
-    if (hasImage) {
-      return analyzePrescription('');
-    }
-    
+  const generateBotResponse = (userMessage: string): string => {
     const message = userMessage.toLowerCase();
     
     if (message.includes('medicine') || message.includes('medication') || message.includes('drug')) {
@@ -103,10 +96,10 @@ const Demo = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
       toast({
         title: "Invalid file type",
-        description: "Please upload an image file (JPG, PNG, etc.)",
+        description: "Please upload an image file (JPG, PNG, etc.) or PDF",
         variant: "destructive",
       });
       return;
@@ -116,39 +109,41 @@ const Demo = () => {
     if (file.size > 10 * 1024 * 1024) {
       toast({
         title: "File too large",
-        description: "Please upload an image smaller than 10MB",
+        description: "Please upload a file smaller than 10MB",
         variant: "destructive",
       });
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageUrl = e.target?.result as string;
+    reader.onload = async (e) => {
+      const fileData = e.target?.result as string;
       
       const userMessage: Message = {
         id: Date.now(),
-        text: "I've uploaded my prescription image",
+        text: `I've uploaded my prescription ${file.type === 'application/pdf' ? 'document' : 'image'}`,
         sender: 'user',
         timestamp: new Date(),
-        image: imageUrl
+        image: file.type.startsWith('image/') ? fileData : undefined
       };
 
       setMessages(prev => [...prev, userMessage]);
       setIsTyping(true);
 
-      // Simulate bot analysis time
+      // Analyze the prescription with DeepSeek API
+      const analysis = await analyzePrescription(fileData);
+      
       setTimeout(() => {
         const botResponse: Message = {
           id: Date.now() + 1,
-          text: analyzePrescription(imageUrl),
+          text: analysis,
           sender: 'bot',
           timestamp: new Date()
         };
         
         setMessages(prev => [...prev, botResponse]);
         setIsTyping(false);
-      }, 2000);
+      }, 1000);
     };
     
     reader.readAsDataURL(file);
@@ -202,6 +197,14 @@ const Demo = () => {
 
   const handleQuickMessage = (message: string) => {
     if (message === "Upload prescription") {
+      if (!hasApiKey) {
+        toast({
+          title: "API Key Required",
+          description: "Please set up your DeepSeek API key first to analyze prescriptions",
+          variant: "destructive",
+        });
+        return;
+      }
       fileInputRef.current?.click();
       return;
     }
@@ -209,6 +212,32 @@ const Demo = () => {
     setInputMessage(message);
     setTimeout(() => handleSendMessage(), 100);
   };
+
+  const handleApiKeySet = () => {
+    setHasApiKey(true);
+    toast({
+      title: "Ready to analyze!",
+      description: "You can now upload prescription images for AI analysis",
+    });
+  };
+
+  // Show API key setup if no key is configured
+  if (!hasApiKey) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Link to="/" className="inline-flex items-center text-shushastho-600 hover:text-shushastho-700 mb-6">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Home
+          </Link>
+          <ApiKeySetup onApiKeySet={handleApiKeySet} />
+          <p className="text-center text-sm text-gray-500 mt-4">
+            Your API key is stored locally and never shared
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
@@ -224,7 +253,7 @@ const Demo = () => {
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Experience our WhatsApp-powered AI bot that reads prescriptions and helps rural communities access essential medicines. 
-              Try uploading a prescription image below.
+              Upload a prescription image below for real AI analysis.
             </p>
           </div>
         </div>
@@ -317,7 +346,7 @@ const Demo = () => {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleImageUpload}
-                accept="image/*"
+                accept="image/*,application/pdf"
                 className="hidden"
               />
               <Button
@@ -352,13 +381,13 @@ const Demo = () => {
           <Card className="mt-6 p-6 text-center">
             <h3 className="font-semibold mb-2">How to use this demo</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Upload a prescription image or ask about medicines, delivery times, or use the quick response buttons above.
+              Upload a prescription image/PDF or ask about medicines, delivery times, or use the quick response buttons above.
             </p>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <h4 className="font-medium text-shushastho-600">Try:</h4>
                 <ul className="text-gray-600 mt-1 space-y-1">
-                  <li>• Upload prescription image</li>
+                  <li>• Upload prescription image/PDF</li>
                   <li>• "I need paracetamol"</li>
                   <li>• "How does delivery work?"</li>
                 </ul>
@@ -366,7 +395,7 @@ const Demo = () => {
               <div>
                 <h4 className="font-medium text-shushastho-600">Features:</h4>
                 <ul className="text-gray-600 mt-1 space-y-1">
-                  <li>• Prescription validation</li>
+                  <li>• Real AI prescription analysis</li>
                   <li>• Medicine extraction</li>
                   <li>• Delivery tracking</li>
                 </ul>
